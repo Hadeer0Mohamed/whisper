@@ -38,6 +38,7 @@ import {
   writeLastRoom,
 } from "@/lib/preferences"
 import { useStoredValue } from "@/lib/use-client-value"
+import { unlockAudioContext } from "@/lib/whisper/audio-context"
 import { useWhisperRoom } from "@/lib/whisper/use-whisper-room"
 
 const HINT_DURATION_MS = 3000
@@ -100,6 +101,9 @@ export function RoomScreen({ code }: { code: string }) {
       return
     }
     localStorage.setItem(STORAGE_KEYS.displayName, name)
+    // Must happen before the first await: iOS only unlocks an AudioContext
+    // inside a real user gesture, and awaiting the token request ends it.
+    unlockAudioContext()
     await connect({ code, displayName: name, identity: getIdentity() })
   }
 

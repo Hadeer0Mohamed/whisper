@@ -19,6 +19,7 @@ import {
     type Volumes,
 } from "@/lib/preferences";
 
+import { getSharedAudioContext, unlockAudioContext } from "./audio-context";
 import {
     GENERAL_TRACK_NAME,
     MIC_MUTED_ATTRIBUTE,
@@ -502,7 +503,17 @@ export function useWhisperRoom() {
             }
 
             const [generalMedia, whisperMedia] = mediaTracksRef.current;
-            const room = new Room({ adaptiveStream: false, dynacast: false });
+            const sharedContext = getSharedAudioContext();
+            const room = new Room({
+                adaptiveStream: false,
+                dynacast: false,
+                // iOS Safari treats HTMLMediaElement.volume as read-only, so the
+                // SDK's default `element.volume = x` is silently ignored there and
+                // neither the sliders nor whisper ducking would do anything. Mixing
+                // through Web Audio routes every remote track via a GainNode, which
+                // iOS does honour. Enabled everywhere so all platforms share one path.
+                webAudioMix: sharedContext ? { audioContext: sharedContext } : true,
+            });
             roomRef.current = room;
 
             const onChange = () => refresh(room);
@@ -670,6 +681,9 @@ export function useWhisperRoom() {
     const enableAudio = useCallback(async () => {
         const room = roomRef.current;
         if (!room) return;
+        // This runs from a tap, which is the one moment iOS will let the shared
+        // context out of "suspended".
+        unlockAudioContext();
         await room.startAudio();
         refresh(room);
     }, [refresh]);

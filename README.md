@@ -155,6 +155,16 @@ exactly one of them: **Room** (when you are not whispering), **Others** (the
 room while you _are_ whispering, defaulting to 15%) and **Whisper**. Ending a
 whisper therefore restores your normal room level automatically.
 
+> **iOS needs Web Audio for any of this to work.** Safari on iOS treats
+> `HTMLMediaElement.volume` as read-only — assignments are silently ignored so
+> the hardware buttons stay in charge. LiveKit's default playback path sets
+> `element.volume`, so on iPhone both the sliders and whisper ducking would do
+> nothing at all. The room is therefore created with `webAudioMix`, which routes
+> every remote track through a `GainNode` that iOS does honour. Because iOS also
+> only unlocks an `AudioContext` inside a real user gesture — and a gesture does
+> not survive an `await` — the context is a module-level singleton unlocked
+> synchronously from the join tap, before the token request.
+
 ## Language and theme
 
 Locale is stored in a `whisper.locale` cookie and applied on the server, so
